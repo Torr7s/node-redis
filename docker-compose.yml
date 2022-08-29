@@ -1,0 +1,48 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:latest
+    container_name: redis_cache_db
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_DB: ${PG_DB}
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASS}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: redis_cache_app
+    command: 'yarn start:dev'
+    ports: 
+      - '3000:3000'
+      - '9229:9229'
+    volumes:
+      - .:/usr/app
+    links:
+      - db
+      - redis
+    depends_on:
+      - db
+      - redis
+    environment:
+      NODE_DEV: dev
+      PORT: 3000
+      DATABASE_URL: postgresql://${PG_USER}:${PG_PASS}@db:5432/${PG_DB}?schema=public
+
+  redis:
+    image: bitnami/redis:latest
+    expose:
+      - 6379
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASS}
+
+volumes:
+  pgdata:
+    driver: local
